@@ -65,7 +65,7 @@ def bulk_edit_column(col, value):
     st.session_state.edited = True
 
 if edit_mode:
-    st.markdown("#### Click 'Set All: [column]' above to bulk edit that column")
+    st.markdown("#### Bulk-edit 👇")
     # Show table header with clickable "Set All" for each column
     cols = st.columns(len(st.session_state.edited_df.columns))
     for idx, col in enumerate(st.session_state.edited_df.columns):
