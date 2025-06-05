@@ -23,7 +23,7 @@ def generate_sample_data(n):
         })
     return data
 
-# Session state for initial data and edit tracking
+# Initialize session state
 if "df" not in st.session_state:
     st.session_state.df = pd.DataFrame(generate_sample_data(20))
 if "edited_df" not in st.session_state:
@@ -32,6 +32,10 @@ if "edited" not in st.session_state:
     st.session_state.edited = False
 if "bulk_column_open" not in st.session_state:
     st.session_state.bulk_column_open = {col: False for col in st.session_state.df.columns}
+if "bulk_values" not in st.session_state:
+    st.session_state.bulk_values = {col: "" for col in st.session_state.df.columns}
+if "bulk_trigger" not in st.session_state:
+    st.session_state.bulk_trigger = {col: False for col in st.session_state.df.columns}
 
 st.title("Directly Editable Data Table (Bulk Edit by Column)")
 
@@ -57,21 +61,17 @@ column_config = {
 }
 
 def bulk_edit_column(col, value):
-    # Edit the entire column in session_state.edited_df
     st.session_state.edited_df[col] = value
     st.session_state.edited = True
 
 if edit_mode:
-    st.markdown("#### Double-click (simulate: click) column header to bulk edit that column")
+    st.markdown("#### Click 'Set All: [column]' above to bulk edit that column")
     # Show table header with clickable "Set All" for each column
     cols = st.columns(len(st.session_state.edited_df.columns))
     for idx, col in enumerate(st.session_state.edited_df.columns):
         with cols[idx]:
-            # Toggle bulk edit interface for this column
             if st.button(f"Set All: {col}", key=f"open_bulk_{col}"):
-                # Simulate double click by toggling open/closed
                 st.session_state.bulk_column_open[col] = not st.session_state.bulk_column_open[col]
-
             # Show bulk edit UI if open
             if st.session_state.bulk_column_open[col]:
                 st.markdown(f"**Bulk set all values for _{col}_**")
@@ -80,29 +80,32 @@ if edit_mode:
                     options = manufacturer_names if col == "Manufacturer Name" else (
                         equipment_numbers if col == "Equipment Number" else product_statuses
                     )
-                    val = st.selectbox(
+                    st.session_state.bulk_values[col] = st.selectbox(
                         f"New value for all '{col}'", options=options, key=f"bulk_val_{col}"
                     )
-                # Text columns
                 else:
                     max_chars = 80 if col == "Article Number" else 40
-                    val = st.text_input(
-                        f"New value for all '{col}'", value="", max_chars=max_chars, key=f"bulk_val_{col}"
+                    st.session_state.bulk_values[col] = st.text_input(
+                        f"New value for all '{col}'", value=st.session_state.bulk_values[col], max_chars=max_chars, key=f"bulk_val_{col}"
                     )
                 if st.button("Apply to all", key=f"apply_bulk_{col}"):
+                    value = st.session_state.bulk_values[col]
                     if col in ["Article Number", "Description"]:
-                        if val.strip() == "":
+                        if value.strip() == "":
                             st.warning("Please enter a value.")
                         else:
-                            bulk_edit_column(col, val)
+                            st.session_state.bulk_trigger[col] = True
                             st.session_state.bulk_column_open[col] = False
-                            st.experimental_rerun()
                     else:
-                        bulk_edit_column(col, val)
+                        st.session_state.bulk_trigger[col] = True
                         st.session_state.bulk_column_open[col] = False
-                        st.experimental_rerun()
 
-    # In-table editing
+    # Bulk apply changes just before data editor
+    for col, trigger in st.session_state.bulk_trigger.items():
+        if trigger:
+            bulk_edit_column(col, st.session_state.bulk_values[col])
+            st.session_state.bulk_trigger[col] = False  # Reset trigger
+
     edited_df = st.data_editor(
         st.session_state.edited_df,
         column_config=column_config,
