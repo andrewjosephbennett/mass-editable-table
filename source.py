@@ -106,7 +106,7 @@ if edit_mode:
             bulk_edit_column(col, st.session_state.bulk_values[col])
             st.session_state.bulk_trigger[col] = False  # Reset trigger
 
-    st.markdown("### Edit individual fields 👇")
+    st.markdown("#### Edit individual fields 👇")
     
     edited_df = st.data_editor(
         st.session_state.edited_df,
