@@ -10,6 +10,7 @@ manufacturer_names = [
 equipment_numbers = ["123", "124", "125", "126"]
 product_statuses = ["active", "inactive"]
 
+# Generate sample data for 20 rows
 def generate_sample_data(n):
     data = []
     for i in range(n):
@@ -22,7 +23,7 @@ def generate_sample_data(n):
         })
     return data
 
-# Session state init
+# Initialize session state
 if "df" not in st.session_state:
     st.session_state.df = pd.DataFrame(generate_sample_data(20))
 if "edited_df" not in st.session_state:
@@ -36,33 +37,9 @@ if "bulk_values" not in st.session_state:
 if "bulk_trigger" not in st.session_state:
     st.session_state.bulk_trigger = {col: False for col in st.session_state.df.columns}
 
-st.title("Directly Editable Data Table (Bulk Edit by Column)")
+st.title("Bulk-editable table")
 
 edit_mode = st.toggle("Edit mode", value=False)
-
-# Align buttons and columns
-col_labels = list(st.session_state.edited_df.columns)
-num_cols = len(col_labels)
-
-# --- Styling for button widths and alignment ---
-st.markdown(
-    """
-    <style>
-    div[data-testid="column"] > div {
-        align-items: flex-end;
-    }
-    .set-all-btn {
-        width: 100%;
-        min-width: 120px;
-        max-width: 220px;
-        margin-bottom: 2px;
-        font-size: 0.95em;
-        font-weight: 500;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
 # Column config (no icons)
 column_config = {
@@ -88,45 +65,30 @@ def bulk_edit_column(col, value):
     st.session_state.edited = True
 
 if edit_mode:
-    # --- "Set All" buttons row, aligned with data columns ---
-    cols = st.columns(num_cols, gap="small")
-    for idx, col in enumerate(col_labels):
+    st.markdown("#### Click 'Set All: [column]' above to bulk edit that column")
+    # Show table header with clickable "Set All" for each column
+    cols = st.columns(len(st.session_state.edited_df.columns))
+    for idx, col in enumerate(st.session_state.edited_df.columns):
         with cols[idx]:
-            button_clicked = st.button(
-                f"Set All: {col}",
-                key=f"open_bulk_{col}",
-                help=f"Set all cells in '{col}' to the same value.",
-                use_container_width=True
-            )
-            st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)  # Tight vertical spacing
-            if button_clicked:
+            if st.button(f"Set All: {col}", key=f"open_bulk_{col}"):
                 st.session_state.bulk_column_open[col] = not st.session_state.bulk_column_open[col]
-
-    # --- Bulk-edit interface row, also aligned ---
-    cols2 = st.columns(num_cols, gap="small")
-    for idx, col in enumerate(col_labels):
-        with cols2[idx]:
+            # Show bulk edit UI if open
             if st.session_state.bulk_column_open[col]:
-                st.markdown(f"<div style='padding:0 2px'><b>Set all for:</b> <i>{col}</i></div>", unsafe_allow_html=True)
+                st.markdown(f"**Bulk set all values for _{col}_**")
                 # Dropdown columns
                 if col in ["Manufacturer Name", "Equipment Number", "Product Status"]:
                     options = manufacturer_names if col == "Manufacturer Name" else (
                         equipment_numbers if col == "Equipment Number" else product_statuses
                     )
                     st.session_state.bulk_values[col] = st.selectbox(
-                        f" ",  # Hide label for compact look
-                        options=options,
-                        key=f"bulk_val_{col}"
+                        f"New value for all '{col}'", options=options, key=f"bulk_val_{col}"
                     )
                 else:
                     max_chars = 80 if col == "Article Number" else 40
                     st.session_state.bulk_values[col] = st.text_input(
-                        f" ",
-                        value=st.session_state.bulk_values[col],
-                        max_chars=max_chars,
-                        key=f"bulk_val_{col}"
+                        f"New value for all '{col}'", value=st.session_state.bulk_values[col], max_chars=max_chars, key=f"bulk_val_{col}"
                     )
-                if st.button("Apply", key=f"apply_bulk_{col}", use_container_width=True):
+                if st.button("Apply to all", key=f"apply_bulk_{col}"):
                     value = st.session_state.bulk_values[col]
                     if col in ["Article Number", "Description"]:
                         if value.strip() == "":
@@ -144,7 +106,6 @@ if edit_mode:
             bulk_edit_column(col, st.session_state.bulk_values[col])
             st.session_state.bulk_trigger[col] = False  # Reset trigger
 
-    # In-table editing
     edited_df = st.data_editor(
         st.session_state.edited_df,
         column_config=column_config,
