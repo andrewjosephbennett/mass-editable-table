@@ -37,7 +37,7 @@ if "bulk_values" not in st.session_state:
 if "bulk_trigger" not in st.session_state:
     st.session_state.bulk_trigger = {col: False for col in st.session_state.df.columns}
 
-st.title("Directly Editable Data Table (Bulk Edit by Column)")
+st.title("Bulk-editable table")
 
 edit_mode = st.toggle("Edit mode", value=False)
 
